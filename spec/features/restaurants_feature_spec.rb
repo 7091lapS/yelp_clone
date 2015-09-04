@@ -10,8 +10,10 @@ feature 'restaurants' do
   end
 
   context 'restaurants have been added' do
-    before do
-      Restaurant.create(name: 'KFC')
+    before(:each) do
+      sign_up
+      user = User.last
+      user.restaurants.create(name: 'KFC')
     end
 
     scenario 'display restaurants' do
@@ -23,17 +25,31 @@ feature 'restaurants' do
 
   context 'creating restaurants' do
     scenario 'prompts user to fill out the form and then displays the new restaurant' do
+      sign_up
+      user = User.last
+      user.restaurants.create(name: 'KFC')
+
       visit restaurants_path
-      click_link 'add restaurant'
-      fill_in 'Name', with: 'KFC'
-      click_button 'Create Restaurant'
       expect(page).to have_content('KFC')
       expect(current_path).to eq restaurants_path
+    end
+
+    scenario 'user must be logged in to create a restaurant' do
+      visit '/'
+      click_link 'add restaurant'
+      expect(Restaurant.count).to be(0)
+      expect(page).to have_content('You need to sign in or sign up before continuing')
     end
 
     context 'an invalid Restaurant' do
       it 'does not let you submit a name that is too short' do
         visit restaurants_path
+
+        click_link('Sign up')
+        expect(current_path).to eq '/users/sign_up'
+        sign_up
+        expect(current_path).to eq '/'
+
         click_link 'add restaurant'
         fill_in 'Name', with: 'kf'
         click_button 'Create Restaurant'
@@ -44,7 +60,11 @@ feature 'restaurants' do
   end
 
   context 'viewing restaurants' do
-    let!(:kfc) { Restaurant.create(name: 'KFC') }
+    before(:each) do
+      sign_up
+    end
+
+    let!(:kfc) { User.last.restaurants.create(name: 'KFC') }
 
     scenario 'lets a user view a restaurant' do
       visit restaurants_path
@@ -55,10 +75,13 @@ feature 'restaurants' do
   end
 
   context 'editing restaurants' do
-    # the before statment creates an entry in the db, whereas the let in the previous test simply creates a double
-    before { Restaurant.create name: 'KFC' }
+    before(:each) do
+      sign_up
+      user = User.first
+      user.restaurants.create(name: 'KFC')
+    end
 
-    scenario 'let a user edit a restaurant' do
+    scenario 'let a user edit a restaurant that belongs to them' do
       visit restaurants_path
       click_link 'Edit KFC'
       fill_in 'Name', with: 'Kentucky Fried Chicken'
@@ -66,21 +89,35 @@ feature 'restaurants' do
       expect(page).to have_content 'Kentucky Fried Chicken'
       expect(current_path).to eq restaurants_path
     end
+
+    scenario 'do not let a user edit a restaurant that does not belong to them' do
+      click_link 'Sign out'
+      expect(page).to have_content 'Signed out successfully.'
+      sign_up2
+      user2 = User.last
+      visit restaurants_path
+      click_link 'Edit KFC'
+      expect(page).to have_content 'You cannot edit that'
+      expect(current_path).to eq restaurants_path
+    end
   end
 
   context 'deleting restaurants' do
     before(:each) do
-      Restaurant.create(name: 'KFC')
-      visit restaurants_path
+      sign_up
+      user = User.last
+      user.restaurants.create(name: 'KFC')
     end
 
     scenario 'removes a restaurant when a user clicks a delete link' do
+      visit '/'
       click_link 'Delete KFC'
       expect(page).not_to have_content 'KFC'
       expect(page).to have_content 'Restaurant deleted successfully'
     end
 
     scenario 'removes all reviews for a restaurant when its deleted' do
+      visit '/'
       click_link 'Review KFC'
       fill_in 'Thoughts', with: 'so so'
       select '3', from: 'Rating'

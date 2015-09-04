@@ -1,5 +1,6 @@
 source 'https://rubygems.org'
 
+gem 'haml'
 gem 'rails', '4.2.4'
 gem 'pg'
 gem 'sass-rails', '~> 5.0'
@@ -10,6 +11,7 @@ gem 'turbolinks'
 gem 'jbuilder', '~> 2.0'
 gem 'sdoc', '~> 0.4.0', group: :doc
 gem 'devise'
+gem 'omniauth-facebook'
 
 group :development, :test do
   gem 'byebug'
